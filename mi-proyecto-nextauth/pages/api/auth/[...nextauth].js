@@ -1,8 +1,9 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
+import { roles } from "../../../lib/roles"; // importa el objeto roles
 
-// Se define aqui los emails de los administradores
+// Aqui se puede definir los correos de administradores
 const adminEmails = [
   "esteban.pacheco@tecsup.edu.pe",
   "otro.admin@gamil.com"
@@ -22,12 +23,13 @@ export default NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async jwt({ token, account, profile }) {
-      // Si el proveedor es GitHub, guarda el username
       if (account?.provider === "github" && profile?.login) {
         token.username = profile.login;
       }
-      // Asigna rol basado en el email
-      if (token.email && adminEmails.includes(token.email)) {
+      // Consulta el rol dinámico primero
+      if (token.email && roles[token.email]) {
+        token.role = roles[token.email];
+      } else if (token.email && adminEmails.includes(token.email)) {
         token.role = "admin";
       } else {
         token.role = "user";
@@ -36,7 +38,6 @@ export default NextAuth({
     },
     async session({ session, token }) {
       session.user.id = token.sub;
-      // Si existe username, agrégalo a la sesión
       if (token.username) {
         session.user.username = token.username;
       }
